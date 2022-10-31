@@ -3,13 +3,15 @@ from matplotlib import pyplot as plt
 import numpy as np
 import cv2
 #-------default-------
-import os
 import telegram as tel
 import threading
+from pygame import mixer
+mixer.init() #Initialzing pyamge mixer
 
+mixer.music.load('sober.mp3') #Loading Music File
 def send_tele(word):
-   bot = tel.Bot(token="<token>")
-   chat_id = "<chat_id>"
+   bot = tel.Bot(token="5503523524:AAFqRO1K0Xx1fTmI5c6NNWcPp_0Q06BeByU")
+   chat_id =  -1001873940891 #5683352342 #5581126225
    image = 'cap.png'
    image2 = 'picture.png'
    bot.sendMessage(chat_id=chat_id, text=word)
@@ -18,6 +20,8 @@ def send_tele(word):
 
 #모델 다운로드
 model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+#model = torch.hub.load('ultralytics/yolov5', 'custom', path='path/to/best.pt')  # local model
+#model = torch.hub.load('C:/Users/Administrator/Desktop/yolov5', 'custom', path='C:/Users/Administrator/Desktop/yolov5/yolov5x6.pt', source='local')  # local repo
 
 #클래스 0번만 적용
 model.classes = [0]
@@ -60,8 +64,6 @@ FirstDetect = False
 DetectPerson = False
 
 #FrameCount = 0
-
-
 
 PointList = []
 
@@ -125,7 +127,9 @@ while cap.isOpened():
                             cv2.imwrite('picture.png', frame)
                             cv2.imwrite('cap.png', ResultRender)
                             
-                            os.popen('"./siren2.mp3"')# 경보음 재생                                                        
+                            #os.popen('"./siren2.mp3"')# 경보음 재생    
+                            #music.start()              
+                            mixer.music.play()                                     
                             #telbot.send_tele(f'경고 : 거수자 {PersonCount}명이 침입')
                             threading.Thread(target=send_tele, args=(f'경고 : 거수자 {PersonCount}명이 침입', )).start()
                             
@@ -135,7 +139,9 @@ while cap.isOpened():
     if cv2.waitKey(10) & 0xFF == ord('r'):
         PointList.clear()
         DetectPerson = False
+        mixer.music.stop()
     
+
         
     if PersonCount>0:
         cv2.putText(ResultRender,f'Person:{PersonCount}', (PersonScreenWidth, PersonScreenHeight), FontFace, FontScale, blue, 1, cv2.LINE_AA)
@@ -149,8 +155,10 @@ while cap.isOpened():
         
     if cv2.waitKey(10) & 0xFF == ord('q'):
         break
+        
     
         
 
 cap.release()
 cv2.destroyAllWindows()
+
