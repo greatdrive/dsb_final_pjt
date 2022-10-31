@@ -10,8 +10,8 @@ mixer.init() #Initialzing pyamge mixer
 
 mixer.music.load('sober.mp3') #Loading Music File
 def send_tele(word):
-   bot = tel.Bot(token="5503523524:AAFqRO1K0Xx1fTmI5c6NNWcPp_0Q06BeByU")
-   chat_id =  -1001873940891 #5683352342 #5581126225
+   bot = tel.Bot(token="<token>")
+   chat_id =  "<token>"
    image = 'cap.png'
    image2 = 'picture.png'
    bot.sendMessage(chat_id=chat_id, text=word)
@@ -127,7 +127,7 @@ while cap.isOpened():
                             cv2.imwrite('picture.png', frame)
                             cv2.imwrite('cap.png', ResultRender)
                             
-                            #os.popen('"./siren2.mp3"')# 경보음 재생    
+                            #os.popen('"<>"')# 경보음 재생    
                             #music.start()              
                             mixer.music.play()                                     
                             #telbot.send_tele(f'경고 : 거수자 {PersonCount}명이 침입')
