@@ -1,17 +1,22 @@
 import torch
-from matplotlib import pyplot as plt
 import numpy as np
 import cv2
-#-------default-------
 import telegram as tel
 import threading
 from pygame import mixer
+from shapely.geometry import Polygon
+
 mixer.init() #Initialzing pyamge mixer
 
-mixer.music.load('sober.mp3') #Loading Music File
+mixer.music.load('mp3.mp3') #Loading Music File
+
+
+
+
+
 def send_tele(word):
-   bot = tel.Bot(token="<token>")
-   chat_id =  "<token>"
+   bot = tel.Bot(token="<botcode>")
+   chat_id =  <chat_id>
    image = 'cap.png'
    image2 = 'picture.png'
    bot.sendMessage(chat_id=chat_id, text=word)
@@ -36,7 +41,9 @@ black= (0,0,0)
 #FontFace 설정
 FontFace =  cv2.FONT_HERSHEY_PLAIN
 
+#카메라 0번
 cap = cv2.VideoCapture(0)
+
 #화면크기 변수
 ScreenWidth = 1280
 ScreenHeight = 800
@@ -61,7 +68,7 @@ cap.set(cv2.CAP_PROP_FRAME_HEIGHT, ScreenHeight)
 FirstDetect = False
 
 #사람 탐지 유무
-DetectPerson = False
+DetectPerson = 0
 
 #FrameCount = 0
 
@@ -69,36 +76,32 @@ PointList = []
 
 def mouse_handler(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN: # 마우스 왼쪽 버튼 Down
-        if len(PointList) < 2:
+        if len(PointList) < 4:
             PointList.append((x, y))
+#동영상 저장
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+frame_width = int(cap.get(3))
+frame_height = int(cap.get(4))
+out = cv2.VideoWriter('outpy.mp4', fourcc, 10, (frame_width,frame_height))
 
+#opencv webcam
 while cap.isOpened():
     ret, frame = cap.read()
-    cv2.imwrite('picture.png', frame)
-    # Make detections 
+    
+    out.write(frame)
+    #키입력 무한대기
+    key = cv2.waitKey(10) & 0xFF
+    if DetectPerson == False:
+        cv2.imwrite('picture.png', frame)
+    # Make detections
+    
     results = model(frame)
     
     #랜더링
     ResultRender =np.squeeze(results.render())
-    
-    
-    if len(PointList) == 2:
-        cv2.rectangle(ResultRender, PointList[0], PointList[1], red, 3)
-        
-        if PointList[0][0] > PointList[1][0]:
-            Xmax = PointList[0][0]
-            Xmin = PointList[1][0]
-        else:
-            Xmax = PointList[1][0]
-            Xmin = PointList[0][0]
-        
-        if PointList[0][1] > PointList[1][1]:
-            Ymax = PointList[0][1]
-            Ymin = PointList[1][1]
-        else:
-            Ymax = PointList[1][1]
-            Ymin = PointList[0][1]
-        
+    if len(PointList) >0:
+        for i in range(len(PointList)):
+            cv2.circle(ResultRender, PointList[i], 10, green, cv2.FILLED)
     #객체 데이터 프레임
     ResultsDf = results.pandas().xyxy[0]
     #print(ResultsDf)
@@ -116,31 +119,36 @@ while cap.isOpened():
     for i in range(LenResultsDf):
         if ResultsDfName[i]=='person':
             PersonCount = PersonCount +1
-            PersonX = round(ResultsDfXmin[i]*0.5 + ResultsDfXmax[i]*0.5)
-            PersonY = round(ResultsDfYmin[i]*0.5 + ResultsDfYmax[i]*0.5)
-            cv2.line(ResultRender, (PersonX, PersonY), (PersonX, PersonY), red, 5)
-            if len(PointList) == 2:
-                if Xmin <= PersonX <= Xmax:
-                    if Ymin <= PersonY <= Ymax:
-                        DetectPersonCount = DetectPersonCount + 1
-                        if DetectPerson == False:
-                            cv2.imwrite('picture.png', frame)
-                            cv2.imwrite('cap.png', ResultRender)
+            
+            RXmin = ResultsDfXmin[i]
+            RXmax = ResultsDfXmax[i]
+            RYmin = ResultsDfYmin[i]
+            RYmax = ResultsDfYmax[i]
+            
+            if len(PointList) == 4:
+                points1 = np.array(PointList)
+                p1 = Polygon(points1)
+                cv2.polylines(ResultRender, [points1], True, green, 2)
+                pp=[(RXmin,RYmin),(RXmax,RYmin),(RXmax,RYmax),(RXmin,RYmax)]
+                points2 = np.array(pp)
+                p2 = Polygon(pp)
+                if p1.intersects(p2) == True:
+                    
+                    DetectPersonCount = DetectPersonCount + 1
+                    if DetectPerson == 0:
+                        DetectPerson =1
                             
-                            #os.popen('"<>"')# 경보음 재생    
-                            #music.start()              
-                            mixer.music.play()                                     
-                            #telbot.send_tele(f'경고 : 거수자 {PersonCount}명이 침입')
-                            threading.Thread(target=send_tele, args=(f'경고 : 거수자 {PersonCount}명이 침입', )).start()
+    if DetectPerson == 1:
+        cv2.imwrite('cap.png', ResultRender)
                             
-                        DetectPerson = True
+        #os.popen('"./siren2.mp3"')# 경보음 재생    
+        #music.start()              
+        mixer.music.play()                                     
+        
+        threading.Thread(target=send_tele, args=(f'경고 : 거수자 {PersonCount}명이 침입', )).start()
+        DetectPerson = 2                
+                    
                         
-
-    if cv2.waitKey(10) & 0xFF == ord('r'):
-        PointList.clear()
-        DetectPerson = False
-        mixer.music.stop()
-    
 
         
     if PersonCount>0:
@@ -153,12 +161,19 @@ while cap.isOpened():
             
     cv2.setMouseCallback('BigBrother', mouse_handler)
         
-    if cv2.waitKey(10) & 0xFF == ord('q'):
+    if key == ord('r'):
+        
+        PointList.clear()
+        DetectPerson = 0
+        mixer.music.stop()
+    elif key == ord('w'):
+        DetectPerson = 0
+        mixer.music.stop()
+    elif key == ord('q'):
         break
-        
-    
-        
 
+        
 cap.release()
-cv2.destroyAllWindows()
+out.release()
 
+cv2.destroyAllWindows()
